@@ -1,5 +1,45 @@
 module ApplicationHelper
   ##
+  # Returns a string build from the start and end date of the given conference.
+  #
+  # If the conference is only one day long
+  # * %B %d %Y (January 17 2014)
+  # If the conference starts and ends in the same month and year
+  # * %B %d - %d, %Y (January 17 - 21 2014)
+  # If the conference ends in another month but in the same year
+  # * %B %d - %B %d, %Y (January 31 - February 02 2014)
+  # All other cases
+  # * %B %d, %Y - %B %d, %Y (December 30, 2013 - January 02, 2014)
+  def date_string(start_date, end_date)
+    startstr = 'Unknown - '
+    endstr = 'Unknown'
+    # When the conference is in the same month
+    if start_date.month == end_date.month && start_date.year == end_date.year
+      if start_date.day == end_date.day
+        startstr = start_date.strftime('%B %d')
+        endstr = end_date.strftime(' %Y')
+      else
+        startstr = start_date.strftime('%B %d - ')
+        endstr = end_date.strftime('%d, %Y')
+      end
+    elsif start_date.month != end_date.month && start_date.year == end_date.year
+      startstr = start_date.strftime('%B %d - ')
+      endstr = end_date.strftime('%B %d, %Y')
+    else
+      startstr = start_date.strftime('%B %d, %Y - ')
+      endstr = end_date.strftime('%B %d, %Y')
+    end
+
+    result = startstr + endstr
+    result
+  end
+
+  # Returns time with conference timezone
+  def time_with_timezone(time)
+    time.strftime('%F %R') + ' ' + @conference.timezone.to_s
+  end
+
+  ##
   # Checks if the voting has already started, or if it has already ended
   #
   def voting_open_or_close(program)
@@ -260,12 +300,12 @@ module ApplicationHelper
       space_after_headers: true,
       no_intra_emphasis: true
     }
-    markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML, options)
+    markdown = Redcarpet::Markdown.new(Redcarpet::Render::HTML.new(escape_html: true), options)
     markdown.render(text).html_safe
   end
 
   def markdown_hint(text='')
-    markdown("#{text} Please look at #{link_to '**Markdown Syntax**', 'https://daringfireball.net/projects/markdown/syntax', target: '_blank'} to format your text")
+    markdown("#{text}\n\nPlease look at [**Markdown Syntax**](https://daringfireball.net/projects/markdown/syntax) to format your text")
   end
 
   def omniauth_configured
@@ -377,10 +417,10 @@ module ApplicationHelper
   # Eg: If version.changeset = '{"title"=>[nil, "Premium"], "description"=>[nil, "Premium = Super cool"], "conference_id"=>[nil, 3]}'
   # Output will be 'title, description and conference'
   def updated_attributes(version)
-    version.changeset.
-      reject{ |_, values| values[0].blank? && values[1].blank? }.
-      keys.map{ |key| key.gsub('_id', '').tr('_', ' ')}.join(', ').
-      reverse.sub(',', ' dna ').reverse
+    version.changeset
+      .reject{ |_, values| values[0].blank? && values[1].blank? }
+      .keys.map{ |key| key.gsub('_id', '').tr('_', ' ')}.join(', ')
+      .reverse.sub(',', ' dna ').reverse
   end
 
   def link_to_user(user_id)
@@ -538,6 +578,28 @@ module ApplicationHelper
   end
 
   def quantity_left_of(resource)
+    return '-/-' if resource.quantity.blank?
     "#{resource.quantity - resource.used}/#{resource.quantity}"
+  end
+
+  def concurrent_events(event)
+    return nil unless event.scheduled? && event.program.selected_event_schedules
+    event_schedule = event.program.selected_event_schedules.find_by(event: event)
+    other_event_schedules = event.program.selected_event_schedules.reject { |other_event_schedule| other_event_schedule == event_schedule }
+    concurrent_events = []
+
+    event_time_range = (event_schedule.start_time.strftime '%Y-%m-%d %H:%M')...(event_schedule.end_time.strftime '%Y-%m-%d %H:%M')
+    other_event_schedules.each do |other_event_schedule|
+      next unless other_event_schedule.event.confirmed?
+      other_event_time_range = (other_event_schedule.start_time.strftime '%Y-%m-%d %H:%M')...(other_event_schedule.end_time.strftime '%Y-%m-%d %H:%M')
+      if (event_time_range.to_a & other_event_time_range.to_a).present?
+        concurrent_events << other_event_schedule.event
+      end
+    end
+    concurrent_events
+  end
+
+  def speaker_links(event)
+    event.speakers.map{ |speaker| link_to speaker.name, admin_user_path(speaker) }.join(', ').html_safe
   end
 end

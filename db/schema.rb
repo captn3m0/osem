@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170201193336) do
+ActiveRecord::Schema.define(version: 20170302145716) do
 
   create_table "ahoy_events", force: :cascade do |t|
     t.uuid     "visit_id",   limit: 16
@@ -99,6 +99,8 @@ ActiveRecord::Schema.define(version: 20170201193336) do
     t.integer  "registration_limit", default: 0
     t.string   "picture"
     t.string   "domain"
+    t.integer  "start_hour",         default: 9
+    t.integer  "end_hour",           default: 20
   end
 
   add_index "conferences", ["domain"], name: "index_conferences_on_domain"
@@ -290,6 +292,7 @@ ActiveRecord::Schema.define(version: 20170201193336) do
     t.datetime "voting_start_date"
     t.datetime "voting_end_date"
     t.integer  "selected_schedule_id"
+    t.integer  "schedule_interval",    default: 15,    null: false
   end
 
   add_index "programs", ["selected_schedule_id"], name: "index_programs_on_selected_schedule_id"
@@ -485,7 +488,7 @@ ActiveRecord::Schema.define(version: 20170201193336) do
     t.datetime "created_at"
     t.datetime "updated_at"
     t.string   "name"
-    t.boolean  "email_public"
+    t.boolean  "email_public",           default: true
     t.text     "biography"
     t.string   "nickname"
     t.string   "affiliation"

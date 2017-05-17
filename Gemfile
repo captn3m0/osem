@@ -178,6 +178,9 @@ gem 'cloudinary'
 # for setting app configuration in the environment
 gem 'dotenv-rails'
 
+# For countable.js 
+gem "countable-rails", "~> 0.0.1"
+
 # Both are not in a group as we use it also for rake data:demo
 # for fake data
 gem 'faker'
@@ -190,13 +193,17 @@ gem 'stripe'
 # Provides Sprockets implementation for Rails Asset Pipeline
 gem 'sprockets-rails'
 
+# for multiple speakers select on proposal/event forms
+gem 'selectize-rails'
+
 # Use guard and spring for testing in development
 group :development do
   # to launch specs when files are modified
   gem 'guard-rspec', '~> 4.2.8'
   gem 'spring-commands-rspec'
+  gem 'haml_lint', '~> 0.24.0'
   # for static code analisys
-  gem 'rubocop', require: false
+  gem 'rubocop', '~> 0.48.1', require: false
   # as database
   gem 'sqlite3'
   # to open mails

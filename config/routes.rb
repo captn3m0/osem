@@ -18,7 +18,6 @@ Osem::Application.routes.draw do
   resources :users, except: [:new, :index, :create, :destroy]
 
   namespace :admin do
-    resources :users
     resources :users do
       member do
         patch :toggle_confirmation
@@ -69,7 +68,7 @@ Osem::Application.routes.draw do
             get :vote
           end
         end
-        get 'reports' => 'events#reports'
+        resources :reports, only: :index
       end
 
       resources :resources

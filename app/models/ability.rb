@@ -62,6 +62,10 @@ class Ability
       can [:new, :create], Event do |event|
         event.program.cfp_open? && event.new_record?
       end
+
+      can [:show, :events], Schedule do |schedule|
+        schedule.program.schedule_public
+      end
     end
   end
 
@@ -76,7 +80,7 @@ class Ability
 
     can [:new, :create], Registration do |registration|
       conference = registration.conference
-      conference.registration_open? && !conference.registration_limit_exceeded?
+      conference.registration_open? && !conference.registration_limit_exceeded? || conference.program.speakers.confirmed.include?(user)
     end
 
     can :index, Ticket
@@ -114,6 +118,9 @@ class Ability
     cannot [:edit, :update, :destroy], Question, global: true
     # for admins
     can :manage, :all if user.is_admin
+
+    # even admin cannot create new users with ICHAIN enabled
+    cannot [:new, :create], User if ENV['OSEM_ICHAIN_ENABLED'] == 'true'
 
     cannot :revert_object, PaperTrail::Version do |version|
       (version.event == 'create' && %w(Conference User Event).include?(version.item_type))
@@ -194,6 +201,7 @@ class Ability
     can :manage, Track, program: { conference_id: conf_ids_for_cfp }
     can :manage, DifficultyLevel, program: { conference_id: conf_ids_for_cfp }
     can :manage, EmailSettings, conference_id: conf_ids_for_cfp
+    can :manage, Schedule, program: { conference_id: conf_ids_for_cfp }
     can :manage, Room, venue: { conference_id: conf_ids_for_cfp }
     can :show, Venue, conference_id: conf_ids_for_cfp
     can :show, Commercial, commercialable_type: 'Venue', commercialable_id: Venue.where(conference_id: conf_ids_for_cfp).pluck(:id)
@@ -215,6 +223,7 @@ class Ability
     end
 
     can [:index, :revert_object, :revert_attribute], PaperTrail::Version, item_type: 'Event', conference_id: conf_ids_for_cfp
+    can [:index, :revert_object, :revert_attribute], PaperTrail::Version, item_type: 'Vote', conference_id: conf_ids_for_cfp
     can [:index, :revert_object, :revert_attribute], PaperTrail::Version do |version|
       version.item_type == 'Commercial' && conf_ids_for_cfp.include?(version.conference_id) &&
       (version.object.to_s.include?('Event') || version.object_changes.to_s.include?('Event'))
